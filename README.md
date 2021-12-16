@@ -139,24 +139,28 @@ O - Confs de départ:
  - vm#7: k8s-worker-3.cluster-docker.local  192.168.0.203
  
  - Utilisateurs:
+ ```
     # root #
     $ toor $
-    
+ ```   
  - Installation sur toutes les vms des paquets nécessaires à l'installation du Cluster K8S:
+ ```   
     # apt-get update && apt-get upgrade
     # apt-get install curl apt-transport-https software-properties-common
- 
+ ```
  - Option TeamViewer sur vm#1 CT-HAProxy
+ ```   
     $ wget https://download.teamviewer.com/download/linux/teamviewer_amd64.deb
     # dpkg -i /home/toor/teamviewer_amd64.deb
     # apt-get update --fix-missing
     # apt-get install -f    #(-f = -fix-broken)
-
+```
 
 I - Installation des clients sur vm#1 CT-HAProxy:
 -------------------------------------------------
     
 1) - installation du client Cloud Flare SSL:
+```
     $ ssh toor@192.168.100.100
     
     $ wget https://pkg.cfssl.org/R1.2/cfssl_linux-amd64
@@ -170,11 +174,13 @@ I - Installation des clients sur vm#1 CT-HAProxy:
     # mv cfssljson_linux-amd64 /usr/local/bin/cfssljson
     
     $ cfssl version
+```
     =>  Version: 1.2.0                                                                                                                                                                                                                              
         Revision: dev                                                                                                                                                                                                                               
         Runtime: go1.6
     
 2) - installation du client Kubernetes, kubectl:
+```
     $ wget https://storage.googleapis.com/kubernetes-release/release/v1.13.1/bin/linux/amd64/kubectl
     
     $ chmod +x kubectl
@@ -182,16 +188,20 @@ I - Installation des clients sur vm#1 CT-HAProxy:
     # mv kubectl /usr/local/bin
     
     $ kubectl version
+```
     =>  Client Version: version.Info{Major:"1", Minor:"13", GitVersion:"v1.13.1",
         GitCommit:"eec55b9ba98609a46fee712359c7b5b365bdd920", GitTreeState:"clean", BuildDate:"2018-12-13T10:39:04Z",
         GoVersion:"go1.11.2", Compiler:"gc", Platform:"linux/amd64"}
         The connection to the server localhost:8080 was refused - did you specify the right host or port?
     
 3) - installation du HAProxy LoadBalancer:
+```
     # apt-get install haproxy
     
     # nano /etc/haproxy/haproxy.cfg
+```
     ##################################################
+```
 global
 ...
 
@@ -211,14 +221,20 @@ backend kubernetes-master-nodes
     server k8s-master-1 192.168.0.101:6443 check fall 3 rise 2
     server k8s-master-2 192.168.0.102:6443 check fall 3 rise 2
     server k8s-master-3 192.168.0.103:6443 check fall 3 rise 2
+```   
     ##################################################
+```
     # systemctl restart haproxy
     # systemctl status haproxy
+```
     => active & started sans erreur
     
 4) - génération des certificats:
+```
     $ nano ca-config.json
-    ##################################################
+ ```
+     ##################################################
+```
 {
   "signing": {
     "default": {
@@ -232,10 +248,13 @@ backend kubernetes-master-nodes
     }
   }
 }
+```
     ##################################################
-    
+```
     $ nano ca-csr.json
+```
     ##################################################
+```
 {
   "CN": "Kubernetes",
   "key": {
@@ -252,8 +271,9 @@ backend kubernetes-master-nodes
   }
  ]
 }
+```
     ##################################################
-    
+```    
     $ cfssl gencert -initca ca-csr.json | cfssljson -bare ca
     
     $ ls -la
@@ -261,7 +281,9 @@ backend kubernetes-master-nodes
         -rw-r--r--  1 toor toor     1363 déc.  14 13:00 ca.pem
     
     $ nano kubernetes-csr.json
+```    
     ##################################################
+```
 {
   "CN": "kubernetes",
   "key": {
@@ -278,8 +300,9 @@ backend kubernetes-master-nodes
   }
  ]
 }
+```
     ##################################################
-    
+```    
     $ cfssl gencert \
     -ca=ca.pem \
     -ca-key=ca-key.pem \
@@ -289,10 +312,12 @@ backend kubernetes-master-nodes
     cfssljson -bare kubernetes
     
     $ ls -la
+```   
     =>  -rw-------  1 toor toor     1675 déc.  14 13:06 kubernetes-key.pem
         -rw-r--r--  1 toor toor     1493 déc.  14 13:06 kubernetes.pem
     
 5) copie des certificats sur chaque noeuds du Cluster K8S:
+```
     $ scp ca.pem kubernetes.pem kubernetes-key.pem toor@192.168.0.101:~
     
     $ scp ca.pem kubernetes.pem kubernetes-key.pem toor@192.168.0.102:~
@@ -304,11 +329,12 @@ backend kubernetes-master-nodes
     $ scp ca.pem kubernetes.pem kubernetes-key.pem toor@192.168.0.202:~
     
     $ scp ca.pem kubernetes.pem kubernetes-key.pem toor@192.168.0.203:~
-    
+```    
     
 II - Préparation des K8S-Master & K8S-Worker:
 ---------------------------------------------
 1) - préparation de la vm#2 K8S-Master-1:
+```    
     $ ssh toor@192.168.0.101
     
     # curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
@@ -336,8 +362,9 @@ deb http://apt.kubernetes.io kubernetes-xenial main
     # swapoff -a
     
     # sed -i '/ swap / s/^/#/' /etc/fstab
-    
+```    
 2) - préparation de la vm#3 K8S-Master-2:
+```
     $ ssh toor@192.168.0.102
     
     # curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
@@ -365,8 +392,9 @@ deb http://apt.kubernetes.io kubernetes-xenial main
     # swapoff -a
     
     # sed -i '/ swap / s/^/#/' /etc/fstab
-    
+```    
 3) - préparation de la vm#4 K8S-Master-3:
+```
     $ ssh toor@192.168.0.103
     
     # curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
@@ -394,8 +422,9 @@ deb http://apt.kubernetes.io kubernetes-xenial main
     # swapoff -a
     
     # sed -i '/ swap / s/^/#/' /etc/fstab
-    
+```    
 4) - préparation de la vm#5 K8S-Worker-1:
+```    
     $ ssh toor@192.168.0.201
     
     # curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
@@ -423,8 +452,9 @@ deb http://apt.kubernetes.io kubernetes-xenial main
     # swapoff -a
     
     # sed -i '/ swap / s/^/#/' /etc/fstab
-    
+```    
 5) - préparation de la vm#6 K8S-Worker-2:
+```    
     $ ssh toor@192.168.0.202
     
     # curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
@@ -452,8 +482,9 @@ deb http://apt.kubernetes.io kubernetes-xenial main
     # swapoff -a
     
     # sed -i '/ swap / s/^/#/' /etc/fstab
-    
+```    
 6) - préparation de la vm#7 K8S-Worker-3:
+```   
     $ ssh toor@192.168.0.203
     
     # curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
@@ -481,11 +512,12 @@ deb http://apt.kubernetes.io kubernetes-xenial main
     # swapoff -a
     
     # sed -i '/ swap / s/^/#/' /etc/fstab
-    
+```    
     
 III - Installation du service Etcd sur les K8S-Master:
 ------------------------------------------------------
 1) - installation du service Etcd sur vm#2 K8S-Master-1:
+```    
     $ ssh toor@192.168.0.101
     
     # mkdir /etc/etcd /var/lib/etcd
@@ -537,8 +569,9 @@ WantedBy=multi-user.target
     # systemctl enable etcd
     
     # systemctl start etcd
-    
+```    
 2) - installation du service Etcd sur vm#3 K8S-Master-2:
+```    
     $ ssh toor@192.168.0.102
     
     # mkdir /etc/etcd /var/lib/etcd
@@ -590,8 +623,9 @@ WantedBy=multi-user.target
     # systemctl enable etcd
     
     # systemctl start etcd
-    
+```    
 3) - installation du service Etcd sur vm#4 K8S-Master-3:
+```    
     $ ssh toor@192.168.0.103
     
     # mkdir /etc/etcd /var/lib/etcd
@@ -648,11 +682,12 @@ WantedBy=multi-user.target
     =>  a5c9f73566fadce, started, 192.168.0.101, https://192.168.0.101:2380, https://192.168.0.101:2379
         4701789a3a673ef5, started, 192.168.0.103, https://192.168.0.103:2380, https://192.168.0.103:2379
         90262c9df511cc4d, started, 192.168.0.102, https://192.168.0.102:2380, https://192.168.0.102:2379
-
+```
 
 IV - Initialisation des K8S-Master:
 -----------------------------------
 1) - initialisation du K8S-Master-1:
+```    
     $ ssh toor@192.168.0.101
     
     $ nano config.yaml
@@ -699,8 +734,9 @@ apiServerExtraArgs:
     # scp -r /etc/kubernetes/pki toor@192.168.0.102:~
     
     # scp -r /etc/kubernetes/pki toor@192.168.0.103:~
-
+```
 2) - initialisation du K8S-Master-2:
+```    
     $ ssh toor@192.168.0.102
     
     $ rm ~/pki/apiserver.*
@@ -747,8 +783,9 @@ apiServerExtraArgs:
         as root:
 
         kubeadm join 192.168.0.100:6443 --token 82n789.m8xqzsujnmn1h7cr --discovery-token-ca-cert-hash sha256:7694a3f266b261de815041f129245261a34f3fca6e5402ab0a551893b2b08d09
-    
+```    
 3) - initialisation du K8S-Master-3:
+```    
     $ ssh toor@192.168.0.103
     
     $ rm ~/pki/apiserver.*
@@ -798,11 +835,12 @@ apiServerExtraArgs:
         
     /!\/!\/!\ A CONSERVER /!\/!\/!\
     ===> kubeadm join 192.168.0.100:6443 --token 6t3yg5.mfd81bxravhnim1k --discovery-token-ca-cert-hash sha256:7694a3f266b261de815041f129245261a34f3fca6e5402ab0a551893b2b08d09
-    
+```    
     
 V - initialisation des K8S-Worker:
 ----------------------------------
 1) - initialisation du K8S-Worker-1:
+```    
     $ ssh toor@192.168.0.201
     
     # kubeadm join 192.168.0.100:6443 --token 6t3yg5.mfd81bxravhnim1k --discovery-token-ca-cert-hash sha256:7694a3f266b261de815041f129245261a34f3fca6e5402ab0a551893b2b08d09
@@ -811,8 +849,9 @@ V - initialisation des K8S-Worker:
         * The Kubelet was informed of the new secure connection details.
 
         Run 'kubectl get nodes' on the master to see this node join the cluster.
-    
+ ```   
 2) - initialisation du K8S-Worker-2:
+```    
     $ ssh toor@192.168.0.202
     
     # kubeadm join 192.168.0.100:6443 --token 6t3yg5.mfd81bxravhnim1k --discovery-token-ca-cert-hash sha256:7694a3f266b261de815041f129245261a34f3fca6e5402ab0a551893b2b08d09
@@ -821,8 +860,9 @@ V - initialisation des K8S-Worker:
         * The Kubelet was informed of the new secure connection details.
 
         Run 'kubectl get nodes' on the master to see this node join the cluster.
-    
+```    
 3) - initialisation du K8S-Worker-3:
+```    
     $ ssh toor@192.168.0.203
     
     # kubeadm join 192.168.0.100:6443 --token 6t3yg5.mfd81bxravhnim1k --discovery-token-ca-cert-hash sha256:7694a3f266b261de815041f129245261a34f3fca6e5402ab0a551893b2b08d09
@@ -831,11 +871,12 @@ V - initialisation des K8S-Worker:
         * The Kubelet was informed of the new secure connection details.
 
         Run 'kubectl get nodes' on the master to see this node join the cluster.
-    
+```    
     
 VI - configuration de Kubectl sur la machine client CT-HAProxy:
 ---------------------------------------------------------------
 1) - check du Cluster et transfert du fichier de configuration admin.conf sur CT-HAProxy:
+```    
     $ ssh toor@192.168.0.101
     
     # kubectl --kubeconfig /etc/kubernetes/admin.conf get nodes
@@ -852,15 +893,17 @@ VI - configuration de Kubectl sur la machine client CT-HAProxy:
     $ scp /etc/kubernetes/admin.conf toor@192.168.0.100:/home/toor/
     
     # chmod 600 /etc/kubernetes/admin.conf
-    
+```    
 2) - création du ~/.kube/config sur CT-HAProxy:
+```    
     $ mkdir ~/.kube
     
     $ mv /home/toor/admin.conf ~/.kube/config
     
     $ chmod 600 ~/.kube/config
-    
+```    
 3) - check du cluster et de la communication entre CT-HAProxy et le Cluster K8S:
+```    
     $ kubectl get nodes
     =>  NAME           STATUS     ROLES    AGE   VERSION
         k8s-master-1   NotReady   master   39m   v1.13.1
@@ -870,10 +913,10 @@ VI - configuration de Kubectl sur la machine client CT-HAProxy:
         k8s-worker-2   NotReady   <none>   13m   v1.13.1
         k8s-worker-3   NotReady   <none>   11m   v1.13.1
 
-
+```
 VII - déploiement de Weavenet comme réseau interne au cluster K8S depuis la machine CT-HAProxy:
 -----------------------------------------------------------------------------------------------
-
+```
     $ kubectl apply -f https://git.io/weave-kube-1.6
     
     $ kubectl get pods -n kube-system   #(/!\ attendre et renouveler jusqu'à ce que tout les pods soient "Running" /!\)
@@ -911,10 +954,11 @@ VII - déploiement de Weavenet comme réseau interne au cluster K8S depuis la ma
         k8s-worker-2   Ready    <none>   22m   v1.13.1
         k8s-worker-3   Ready    <none>   21m   v1.13.1
 
-
+```
 VII - installation du Dashboard Kubernetes depuis la machine CT-HAProxy:
 ------------------------------------------------------------------------
 1) - déploiement du Dashboard & check accès au Dashboard
+```    
     $ kubectl create -f https://raw.githubusercontent.com/kubernetes/dashboard/master/src/deploy/recommended/kubernetes-dashboard.yaml
     
     $ kubectl proxy
@@ -924,8 +968,9 @@ VII - installation du Dashboard Kubernetes depuis la machine CT-HAProxy:
     ===> http://localhost:8001/api/v1/namespaces/kube-system/services/https:kubernetes-dashboard:/proxy/
     
     $ [ctrl] + [c] pour arrêter le proxy
-
+```
 2) - création du compte Admin du Dashboard:
+```    
     $ kubectl create serviceaccount dashboard -n default
     
     $ kubectl create clusterrolebinding dashboard-admin -n default --clusterrole=cluster-admin --serviceaccount=default:dashboard
@@ -937,10 +982,11 @@ VII - installation du Dashboard Kubernetes depuis la machine CT-HAProxy:
     /!\/!\/!\ TOKEN DE L'ADMIN A CONSERVER /!\/!\/!\
     ===>
     eyJhbGciOiJSUzI1NiIsImtpZCI6IiJ9.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9uYW1lc3BhY2UiOiJkZWZhdWx0Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZWNyZXQubmFtZSI6ImRhc2hib2FyZC10b2tlbi16NGs3ayIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VydmljZS1hY2NvdW50Lm5hbWUiOiJkYXNoYm9hcmQiLCJrdWJlcm5ldGVzLmlvL3NlcnZpY2VhY2NvdW50L3NlcnZpY2UtYWNjb3VudC51aWQiOiI2ZTQ2NTQ2OS1mZmFlLTExZTgtOWYyOC01MjU0MDA5NTAxZmIiLCJzdWIiOiJzeXN0ZW06c2VydmljZWFjY291bnQ6ZGVmYXVsdDpkYXNoYm9hcmQifQ.Nhl5hkwyXR-et1dnnN8szQ0_rF5nbrBEeRmLT0uvg5nyvBiSyUyuD96Pg7q-SDu8JN4G-WuiYitaBG_ifH0TrIqKt7X85xmcwQMviuirVMuS_S_2xuUHmMax1k90pBITZZ2B21H0z2aEmACrptj7_Kn8X3ncfViDRvXNe5WjLHeQzQvxlMB7_XZl86vGfcfytNdky_re4DiOmG3GotaS-71JoKtyQDidjj6cgXJfn_o0PETq5WlBrrvscVcjUrJF4wPh1s2Ye1qCkyaweajLqF9tnyv06f2w6u305B-eu7ZMLnOa2triNv5Fkpq_6-c_TD-ECz7fmuNJZwM_jBKP8Q
-
+```
 
 VIII - installation de l'addon Heapster pour le monitoring du Cluster K8S depuis la machine CT-HAProxy:
 -------------------------------------------------------------------------------------------------------
+```    
     $ nano heapster.yaml
     ##################################################
 apiVersion: v1
@@ -1015,11 +1061,12 @@ subjects:
   verbs:
   - get
     ##################################################
-    
+```    
 
 IX - Vérifications, lancement du Proxy et accès au Dashboard Kubernetes:
 ------------------------------------------------------------------------
 1) - Cheking du Cluster K8S
+```    
     $ kubectl config view
     =>  apiVersion: v1
         clusters:
@@ -1093,7 +1140,7 @@ IX - Vérifications, lancement du Proxy et accès au Dashboard Kubernetes:
 eyJhbGciOiJSUzI1NiIsImtpZCI6IiJ9.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9uYW1lc3BhY2UiOiJkZWZhdWx0Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZWNyZXQubmFtZSI6ImRhc2hib2FyZC10b2tlbi16NGs3ayIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VydmljZS1hY2NvdW50Lm5hbWUiOiJkYXNoYm9hcmQiLCJrdWJlcm5ldGVzLmlvL3NlcnZpY2VhY2NvdW50L3NlcnZpY2UtYWNjb3VudC51aWQiOiI2ZTQ2NTQ2OS1mZmFlLTExZTgtOWYyOC01MjU0MDA5NTAxZmIiLCJzdWIiOiJzeXN0ZW06c2VydmljZWFjY291bnQ6ZGVmYXVsdDpkYXNoYm9hcmQifQ.Nhl5hkwyXR-et1dnnN8szQ0_rF5nbrBEeRmLT0uvg5nyvBiSyUyuD96Pg7q-SDu8JN4G-WuiYitaBG_ifH0TrIqKt7X85xmcwQMviuirVMuS_S_2xuUHmMax1k90pBITZZ2B21H0z2aEmACrptj7_Kn8X3ncfViDRvXNe5WjLHeQzQvxlMB7_XZl86vGfcfytNdky_re4DiOmG3GotaS-71JoKtyQDidjj6cgXJfn_o0PETq5WlBrrvscVcjUrJF4wPh1s2Ye1qCkyaweajLqF9tnyv06f2w6u305B-eu7ZMLnOa2triNv5Fkpq_6-c_TD-ECz7fmuNJZwM_jBKP8Q
     
     $ [ctrl] + [c] pour arrêter le proxy
-        
+```        
         
 X - Modification sur tout les Masters du NodePort Range des containers:
 -----------------------------------------------------------------------
@@ -1101,6 +1148,7 @@ X - Modification sur tout les Masters du NodePort Range des containers:
     ===> de préférence à faire à l'initialisation des Masters par le flag: --service-node-port-range=[port.de.début]-[port.de.fin]
     
 1) modification du NodePort Range sur K8S-Master-1:
+```    
     $ ssh toor@192.168.0.101
     
     # nano /etc/kubernetes/manifests/kube-apiserver.yaml
@@ -1113,8 +1161,9 @@ X - Modification sur tout les Masters du NodePort Range des containers:
     ##################################################
     
     # reboot
-    
+```    
 2) modification du NodePort Range sur K8S-Master-2:
+```    
     $ ssh toor@192.168.0.102
     
     # nano /etc/kubernetes/manifests/kube-apiserver.yaml
@@ -1127,8 +1176,9 @@ X - Modification sur tout les Masters du NodePort Range des containers:
     ##################################################
     
     # reboot
-
+```
 3) modification du NodePort Range sur K8S-Master-3:
+```     
      $ ssh toor@192.168.0.103
     
     # nano /etc/kubernetes/manifests/kube-apiserver.yaml
@@ -1140,15 +1190,15 @@ X - Modification sur tout les Masters du NodePort Range des containers:
 ...
     ##################################################
     
-    # reboot   
-        
+    # reboot
+```        
         
 XI - Installation des Tools: MetalLB - Helm/Tiller - Cert-Manager (+certificat fictif) - Nginx-Ingress:
 -------------------------------------------------------------------------------------------------------
 
 1) Installation de MetalLB depuis CT-HAProxy:
     ===> permet d'exposer un service avec une IP extérieure au cluster et de faire du LoadBalancing entre containers
-    
+```    
         $ nano metallb.yaml
     ##################################################
 apiVersion: v1
@@ -1433,11 +1483,11 @@ data:
         speaker-kv6gr               1/1     Running   0          2m7s
         speaker-sxj5v               1/1     Running   0          2m7s
     
-
+```
 2) Installation de Helm/Tiller depuis CT-HAProxy:
     ===> permet d'installer d'jouter des applis (containers/pods) au Cluster
     ===> /!\ pas certain que le namespace kube-system soit le plus judicieux, à tester dans un namespace dédié /!\
-    
+```    
     # sudo adduser toor sudo
     
     # reboot
@@ -1487,9 +1537,10 @@ subjects:
         tiller-deploy-c4fd4cd68-wdttd           1/1     Running   0          2m36s
         ...    
         
-        
+```        
         /!\ WARNING /!\
 3) installation de Cert-Manager depuis CT-HAProxy:
+```    
     $ helm install \
     --name cert-manager \
     --namespace kube-system \
@@ -1550,8 +1601,9 @@ subjects:
         $ kubectl get pods -n kube-system
         =>  cert-manager-5b664566dc-pw7px           1/1     Running   0          11m
             ...
-
+```
 4) Création d'un certificat fictif depuis CT-HAProxy:
+```    
     $ nano letsencrypt-staging.yaml
     ##################################################
 apiVersion: certmanager.k8s.io/v1alpha1
@@ -1580,8 +1632,9 @@ spec:
     Once you are ready, create a new ClusterIssuer that points to production:
     https://acme-v02.api.letsencrypt.org/directory
     --- /!\ note pour prod /!\
-        
+```        
 5) Installation d'Nginx-Ingress depuis CT-HAProxy:
+```    
     ===> Serveur Web, Reverse Proxy, LoadBalancing, exposition sur IP externe au Cluster des ports 80 & 443
     ===> /!\ pas certain que le namespace kube-system soit le plus judicieux, à tester dans un namespace dédié /!\
     
