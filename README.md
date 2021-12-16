@@ -1,6 +1,6 @@
 # Labs_Cluster-Kubernetes
 Labs - Cluster Kubernetes
-
+```
 |-------------------------------------------------------------------------------------------------|
 |     ...                      Tuto Install - Cluster K8S - Docker                       ...      |
 |    (o-o)                     Florent Marquez - TSSI27 - AFPA 83                       (o-o)     |
@@ -116,7 +116,7 @@ Labs - Cluster Kubernetes
 
         Kubernetes  v1.13.1
         Docker      v18.06
-
+```
 
 Pré-requis:
 -----------
